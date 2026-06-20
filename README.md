@@ -5,3 +5,5 @@ download is over on the right, so yeah.
 
 theres also leftover code for the tracker features, those are yet to exist, but will be added.
 theres alot of leftover code for scrapped stuff, im lazy tbh.
+
+Also if for any godforsaken reason you want to support this project and donate to me... (why?) go here: https://ko-fi.com/femurdotfem
