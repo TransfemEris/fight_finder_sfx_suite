@@ -6,18 +6,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-# Where crash logs land — next to the script
 LOGS_DIR  = Path(__file__).parent / "crash_logs"
-LOGS: list[Path] = []          # most recent log paths (capped at 20)
+LOGS: list[Path] = []          
 _MAX_LOGS = 20
 
-# Populated by install() so we can show a Tk dialog
 _tk_root = None
 
-# Optional hook: called after the log is written with (log_path, tb_text)
-# Use this to update a status label etc.
 on_crash: Callable[[Path, str], None] | None = None
-
 
 def _write_log(tb_text: str) -> Path:
     LOGS_DIR.mkdir(exist_ok=True)
@@ -28,7 +23,6 @@ def _write_log(tb_text: str) -> Path:
     if len(LOGS) > _MAX_LOGS:
         LOGS.pop(0)
     return log_path
-
 
 def _show_dialog(title: str, message: str, log_path: Path):
     try:
@@ -46,7 +40,6 @@ def _show_dialog(title: str, message: str, log_path: Path):
     except Exception:
         print(f"[crash] {title}: {message}", file=sys.stderr)
         print(f"[crash] log: {log_path}", file=sys.stderr)
-
 
 def _handle(exc_type, exc_value, exc_tb, source: str = "main thread"):
     tb_lines = traceback.format_exception(exc_type, exc_value, exc_tb)
@@ -74,19 +67,13 @@ def _handle(exc_type, exc_value, exc_tb, source: str = "main thread"):
     )
     return log_path
 
-
-# ── Public API ────────────────────────────────────────
-
 def install(tk_root=None):
     global _tk_root
     _tk_root = tk_root
 
-    # Main-thread unhandled exceptions
     sys.excepthook = _excepthook
 
-    # Background thread unhandled exceptions (Python 3.8+)
     threading.excepthook = _thread_excepthook
-
 
 def _excepthook(exc_type, exc_value, exc_tb):
     if issubclass(exc_type, KeyboardInterrupt):
@@ -94,13 +81,11 @@ def _excepthook(exc_type, exc_value, exc_tb):
         return
     _handle(exc_type, exc_value, exc_tb, source="main thread")
 
-
 def _thread_excepthook(args: threading.ExceptHookArgs):
     if args.exc_type is None or issubclass(args.exc_type, SystemExit):
         return
     name = getattr(args.thread, "name", "unknown thread")
     _handle(args.exc_type, args.exc_value, args.exc_tb, source=f"thread '{name}'")
-
 
 def wrap(fn: Callable, source: str = "") -> Callable:
     src = source or getattr(fn, "__name__", repr(fn))
@@ -113,7 +98,6 @@ def wrap(fn: Callable, source: str = "") -> Callable:
 
     _wrapped.__name__ = getattr(fn, "__name__", "_wrapped")
     return _wrapped
-
 
 def log_dir() -> Path:
     return LOGS_DIR
