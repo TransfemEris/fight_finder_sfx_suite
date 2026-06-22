@@ -1,3 +1,5 @@
+**FULL** GUIDE IS AVAILIBLE HERE:  https://www.youtube.com/watch?v=fu1s87Hu_fc
+
 yeah, sfx, but easier, all in one place.... so yeah, guide is in app.
 IT ALLOWS SWING BASED SFX, ARM SWINGING BASED SFX, YIPPE
 also it can play music
