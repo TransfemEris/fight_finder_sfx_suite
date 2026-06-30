@@ -34,7 +34,9 @@ def _relaunch_app() -> None:
 
     try:
         if getattr(sys, "frozen", False):
-
+            # onedir builds: sys.executable is a real exe sitting in its
+            # own persistent folder, no temp extraction involved, so a
+            # plain spawn is safe -- no race to dodge here.
             subprocess.Popen([sys.executable], close_fds=True)
         else:
             subprocess.Popen([sys.executable, __file__] + sys.argv[1:],
@@ -47,7 +49,7 @@ def _relaunch_app() -> None:
         )
         raise
 
-    time.sleep(0.5)
+    time.sleep(0.3)
 
 BUTTON_LABELS: dict[str, str] = {
     "trigger":    "Trigger",
