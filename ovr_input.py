@@ -27,7 +27,6 @@ _INVALID = openvr.k_unTrackedDeviceIndexInvalid
 _MAX     = openvr.k_unMaxTrackedDeviceCount
 
 def _rotation_quat(m) -> tuple[float, float, float, float]:
-    
 
     m00, m01, m02 = m[0][0], m[0][1], m[0][2]
     m10, m11, m12 = m[1][0], m[1][1], m[1][2]
@@ -75,7 +74,6 @@ def _quat_conj(q: tuple) -> tuple[float, float, float, float]:
     return (w, -x, -y, -z)
 
 def _quat_angle_deg(a, b) -> float:
-    
 
     dot = sum(p * q for p, q in zip(a, b))
     dot = max(-1.0, min(1.0, abs(dot)))
@@ -116,9 +114,6 @@ class OVRInput:
 
         self._foot_grounded: dict[str, bool] = {"foot_left": False, "foot_right": False}
 
-        
-        
-        
         self.prox_threshold:          float = 0.30   
         self.impact_speed_threshold:  float = 1.50   
         self._prox_in_range:          bool  = False
@@ -132,35 +127,18 @@ class OVRInput:
         self.on_button_press:         Optional[Callable[[str, str],   None]] = None
         self.on_button_release:       Optional[Callable[[str, str],   None]] = None
 
-        
-        
-        
-        
-        
         self.shoulder_radius:       float = 0.18   
         self.shoulder_down_offset:  float = 0.30   
         self.shoulder_side_offset:  float = 0.20   
         self.shoulder_back_offset:  float = 0.15   
 
-        
         self._hand_in_shoulder: dict[str, set[str]] = {"left": set(), "right": set()}
 
-        
         self.on_shoulder_grab: Optional[Callable[[str], None]] = None
 
-        
-        
-        
-        
-        
-        
-        
         self._live_rel: dict[str, dict | None] = {"left": None, "right": None}
 
-    
-
     def capture_relative_pose(self) -> dict:
-        
 
         rel = self._live_rel
         out: dict[str, dict | None] = {}
@@ -170,7 +148,6 @@ class OVRInput:
         return out
 
     def pose_match(self, target: dict, pos_tol: float, rot_tol_deg: float) -> bool:
-        
 
         if not target:
             return False
@@ -192,14 +169,11 @@ class OVRInput:
                 return False
         return True
 
-    
-
     def list_trackers(self) -> list[TrackerInfo]:
         if not self._vr:
             print("[ovr] list_trackers: not connected")
             return []
 
-        
         left_idx  = self._vr.getTrackedDeviceIndexForControllerRole(
             openvr.TrackedControllerRole_LeftHand)
         right_idx = self._vr.getTrackedDeviceIndexForControllerRole(
@@ -210,7 +184,7 @@ class OVRInput:
         print("[ovr] full device scan:")
 
         for idx in range(_MAX):
-            
+
             try:
                 connected = self._vr.isTrackedDeviceConnected(idx)
             except Exception:
@@ -222,7 +196,6 @@ class OVRInput:
             serial = _get_str_prop(self._vr, idx, openvr.Prop_SerialNumber_String) or f"device_{idx}"
             model  = _get_str_prop(self._vr, idx, openvr.Prop_ModelNumber_String)
 
-            
             try:
                 cls_int = int(cls)
             except Exception:
@@ -239,13 +212,10 @@ class OVRInput:
 
             print(f"  [{idx}] {cls_name:20s}  raw={cls_int}  serial={serial!r}  model={model!r}")
 
-            
             if cls == openvr.TrackedDeviceClass_GenericTracker:
                 out.append(TrackerInfo(idx, serial, model, cls))
                 continue
 
-            
-            
             if cls == openvr.TrackedDeviceClass_Controller and idx not in hand_indices:
                 print(f"         ^ unassigned Controller — included as tracker option")
                 out.append(TrackerInfo(idx, serial, model, cls))
@@ -253,8 +223,6 @@ class OVRInput:
         if not out:
             print("[ovr] WARNING: no tracker candidates found in device scan above")
         return out
-
-    
 
     def connect(self) -> tuple[bool, Optional[str]]:
         if self.connected:
@@ -280,8 +248,6 @@ class OVRInput:
         except Exception:
             pass
         self._vr = None
-
-    
 
     def _hand_map(self) -> dict[int, str]:
         left  = self._vr.getTrackedDeviceIndexForControllerRole(
@@ -342,15 +308,12 @@ class OVRInput:
                             self.on_foot_land(foot_name)
                     self._foot_grounded[foot_name] = on_ground
 
-                
-                
-                
                 hmd_pose = poses[0]
                 if hmd_pose.bPoseIsValid:
                     hm = hmd_pose.mDeviceToAbsoluteTracking.m
                     hpos = (hm[0][3], hm[1][3], hm[2][3])
                     hquat_conj = _quat_conj(_rotation_quat(hm))
-                    
+
                     cols = (
                         (hm[0][0], hm[1][0], hm[2][0]),
                         (hm[0][1], hm[1][1], hm[2][1]),
@@ -375,7 +338,6 @@ class OVRInput:
                 else:
                     self._live_rel = {"left": None, "right": None}
 
-                
                 if self.on_controller_proximity or self.on_controller_impact:
                     left_idx  = next((i for i, h in hand_map.items() if h == "left"),  None)
                     right_idx = next((i for i, h in hand_map.items() if h == "right"), None)
@@ -391,21 +353,19 @@ class OVRInput:
                             dist = math.sqrt(dx*dx + dy*dy + dz*dz)
                             now  = time.monotonic()
 
-                            
                             in_range = dist <= self.prox_threshold
                             if in_range and not self._prox_in_range:
                                 if self.on_controller_proximity:
                                     self.on_controller_proximity(dist)
                             self._prox_in_range = in_range
 
-                            
                             if self._prev_ctrl_dist >= 0.0:
                                 dt = max(now - self._prev_ctrl_time, 1e-6)
                                 closing_speed = (self._prev_ctrl_dist - dist) / dt
                                 if closing_speed >= self.impact_speed_threshold:
                                     if self.on_controller_impact:
                                         self.on_controller_impact()
-                                    
+
                                     self._prev_ctrl_dist = -1.0
                                     self._prev_ctrl_time = now
                                 else:
@@ -415,16 +375,12 @@ class OVRInput:
                                 self._prev_ctrl_dist = dist
                                 self._prev_ctrl_time = now
 
-                
-                
-                
-                
                 if self.on_shoulder_grab is not None:
                     hmd_pose = poses[0]
                     if hmd_pose.bPoseIsValid:
                         hm = hmd_pose.mDeviceToAbsoluteTracking
                         hx, hy, hz = hm.m[0][3], hm.m[1][3], hm.m[2][3]
-                        
+
                         rx, ry, rz =  hm.m[0][0],  hm.m[1][0],  hm.m[2][0]
                         bx, by, bz =  hm.m[0][2],  hm.m[1][2],  hm.m[2][2]
 
@@ -432,8 +388,6 @@ class OVRInput:
                         side = self.shoulder_side_offset
                         back = self.shoulder_back_offset
 
-                        
-                        
                         shoulder_anchors = {
                             "left":  (hx - rx*side + bx*back,
                                       hy - down - ry*side + by*back,
@@ -465,7 +419,7 @@ class OVRInput:
                     if hand is None or btn_name is None:
                         continue
                     if event.eventType == openvr.VREvent_ButtonPress:
-                        
+
                         if btn_name == "grip" and self.on_shoulder_grab:
                             for shoulder in list(self._hand_in_shoulder.get(hand, ())):
                                 self.on_shoulder_grab(shoulder)

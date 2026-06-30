@@ -146,17 +146,16 @@ def load_profile(name: str) -> dict:
     with open(path, encoding="utf-8") as f:
         raw = json.load(f)
 
-    
     for source in ("left", "right", "head", "foot_left", "foot_right"):
         s = raw.get(source, {})
         sw = s.get("swing", {})
         if sw and "tier" not in sw:
             if "tiers" in sw:
-                
+
                 old_tiers = sw.pop("tiers")
                 sw["tier"] = old_tiers[0] if old_tiers else _default_tier()
             else:
-                
+
                 old_file = sw.get("file", "")
                 old_vol  = sw.get("volume", 1.0)
                 old_low  = sw.get("low_threshold", 0.5)

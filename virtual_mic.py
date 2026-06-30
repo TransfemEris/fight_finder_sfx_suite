@@ -1,5 +1,4 @@
 
-
 import sys
 from pathlib import Path
 
@@ -11,7 +10,6 @@ _CABLE_INPUT_HINT  = "cable input"
 _CABLE_OUTPUT_HINT = "cable output"   
 
 def _base_dir() -> Path:
-    
 
     if getattr(sys, "frozen", False):
         return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
@@ -26,7 +24,6 @@ def installer_path() -> Path | None:
     return None
 
 def refresh_devices():
-    
 
     try:
         sd._terminate()
@@ -35,7 +32,6 @@ def refresh_devices():
         pass
 
 def find_cable_input_device() -> int | None:
-    
 
     try:
         for i, d in enumerate(sd.query_devices()):
@@ -46,7 +42,6 @@ def find_cable_input_device() -> int | None:
     return None
 
 def find_cable_output_device() -> int | None:
-    
 
     try:
         for i, d in enumerate(sd.query_devices()):
@@ -60,7 +55,6 @@ def is_installed() -> bool:
     return find_cable_input_device() is not None and find_cable_output_device() is not None
 
 def run_installer() -> tuple[bool, str]:
-    
 
     if sys.platform != "win32":
         return False, "Virtual mic install is Windows-only"
@@ -77,27 +71,24 @@ def run_installer() -> tuple[bool, str]:
     import shutil
     import tempfile
 
-    
-    
-    
     _VBCABLE_FILES = [
         "VBCABLE_Setup_x64.exe",
         "VBCABLE_ControlPanel.exe",
         "pin_in.ico",
         "pin_out.ico",
         "readme.txt",
-        
+
         "vbaudio_cable64arm_win10.sys",
         "vbaudio_cable64_win10.sys",
         "vbaudio_cable64_win10.cat",
-        
+
         "vbaudio_cable64_2003.sys",
         "vbaudio_cable64_2003.cat",
         "vbaudio_cable64_vista.sys",
         "vbaudio_cable64_vista.cat",
         "vbaudio_cable64_win7.sys",
         "vbaudio_cable64_win7.cat",
-        
+
         "vbaudio_cable_2003.sys",
         "vbaudio_cable_2003.cat",
         "vbaudio_cable_vista.sys",
@@ -106,12 +97,12 @@ def run_installer() -> tuple[bool, str]:
         "vbaudio_cable_win7.cat",
         "vbaudio_cable_xp.sys",
         "vbaudio_cable_xp.cat",
-        
+
         "vbMmeCable64_2003.inf",
         "vbMmeCable64_vista.inf",
         "vbMmeCable64_win10.inf",
         "vbMmeCable64_win7.inf",
-        
+
         "vbMmeCable_2003.inf",
         "vbMmeCable_vista.inf",
         "vbMmeCable_win7.inf",
@@ -134,7 +125,7 @@ def run_installer() -> tuple[bool, str]:
         ret = ctypes.windll.shell32.ShellExecuteW(
             None, "runas", str(dst), "", str(tmp_dir), 1
         )
-        
+
         if ret <= 32:
             return False, f"Could not launch installer (code {ret}) — UAC may have been declined"
         return True, ""
