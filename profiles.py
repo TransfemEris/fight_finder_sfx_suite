@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
 
-PROFILES_DIR = Path(__file__).parent / "profiles"
+from app_paths import user_path
+
+PROFILES_DIR = user_path("profiles")
 
 BUTTON_IDS = ("trigger", "grip", "primary", "secondary", "thumbstick")
 

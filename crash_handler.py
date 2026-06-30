@@ -6,7 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-LOGS_DIR  = Path(__file__).parent / "crash_logs"
+from app_paths import user_path
+
+LOGS_DIR  = user_path("crash_logs")
 LOGS: list[Path] = []          
 _MAX_LOGS = 20
 

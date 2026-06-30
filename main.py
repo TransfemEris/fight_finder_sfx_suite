@@ -23,31 +23,8 @@ def _resource_path(name: str) -> Path:
     return base / name
 
 def _user_data_path(name: str) -> Path:
-    if getattr(sys, "frozen", False):
-        import os
-        import shutil
-
-        appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-        base = appdata / "Fight Finder SFX Suite"
-        base.mkdir(parents=True, exist_ok=True)
-
-        target = base / name
-
-        if not target.exists():
-            old_base = Path(sys.executable).parent
-            old_path = old_base / name
-            if old_path.exists():
-                try:
-                    if old_path.is_dir():
-                        shutil.copytree(old_path, target)
-                    else:
-                        shutil.copy2(old_path, target)
-                except Exception:
-                    pass
-        return target
-    else:
-        base = Path(__file__).parent
-        return base / name
+    from app_paths import user_path
+    return user_path(name)
 
 def _relaunch_app() -> None:
     import subprocess
