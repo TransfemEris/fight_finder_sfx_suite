@@ -3004,16 +3004,50 @@ class App:
             self._nb.add(tab, text=label)
             if key == "sfx":
                 self._tab_frames["sfx_outer"] = tab
-                self._tab_frames["head"], self._tab_canvases["head"] = \
-                    self._bottom_bar(tab, header="◉ HEAD")
 
-                combo_bar = tk.Frame(tab, bg=_theme.get("bg_base"))
-                combo_bar.pack(side="bottom", fill="x")
-                self._tab_frames["combo_bar"] = combo_bar
-                self._tab_frames["left"],  self._tab_canvases["left"]  = \
-                    self._split_scrollable(tab, side="left",  header="◈ LEFT HAND")
-                self._tab_frames["right"], self._tab_canvases["right"] = \
-                    self._split_scrollable(tab, side="right", header="◈ RIGHT HAND")
+                # Grid (not pack) so every row gets a *proportional* share of
+                # height as the window shrinks, instead of fixed-size rows
+                # eating their full request first and starving the rest down
+                # to zero. minsize keeps every section reachable even when
+                # squeezed hard; each section scrolls internally past that.
+                tab.rowconfigure(0, weight=3, minsize=90)
+                tab.rowconfigure(1, weight=1, minsize=50)
+                tab.rowconfigure(2, weight=1, minsize=50)
+                tab.columnconfigure(0, weight=1)
+
+                hands_row = tk.Frame(tab, bg=_theme.get("bg_base"))
+                hands_row.grid(row=0, column=0, sticky="nsew")
+                hands_row.rowconfigure(0, weight=1)
+                hands_row.columnconfigure(0, weight=1)
+                hands_row.columnconfigure(2, weight=1)
+
+                left_outer, left_canvas, left_body = \
+                    self._scroll_section(hands_row, header="◈ LEFT HAND")
+                left_outer.grid(row=0, column=0, sticky="nsew")
+
+                div = tk.Frame(hands_row, bg=_theme.get("sep_color"), width=1)
+                div.grid(row=0, column=1, sticky="ns")
+
+                right_outer, right_canvas, right_body = \
+                    self._scroll_section(hands_row, header="◈ RIGHT HAND")
+                right_outer.grid(row=0, column=2, sticky="nsew")
+
+                self._tab_frames["left"]   = left_body
+                self._tab_canvases["left"] = left_canvas
+                self._tab_frames["right"]   = right_body
+                self._tab_canvases["right"] = right_canvas
+
+                head_outer, head_canvas, head_body = \
+                    self._scroll_section(tab, header="◉ HEAD")
+                head_outer.grid(row=1, column=0, sticky="nsew")
+                self._tab_frames["head"]   = head_body
+                self._tab_canvases["head"] = head_canvas
+
+                combo_outer, combo_canvas, combo_body = \
+                    self._scroll_section(tab, header="◈ BUTTON COMBOS")
+                combo_outer.grid(row=2, column=0, sticky="nsew")
+                self._tab_frames["combo_bar"]   = combo_body
+                self._tab_canvases["combo_bar"] = combo_canvas
             else:
                 canvas, scroll = self._scrollable(tab)
                 self._tab_frames[key]   = scroll
@@ -3031,7 +3065,7 @@ class App:
         if key == "sfx":
             x = event.x_root
             y = event.y_root
-            for side in ("left", "right"):
+            for side in ("left", "right", "head", "combo_bar"):
                 c = self._tab_canvases.get(side)
                 if c:
                     try:
@@ -3049,23 +3083,46 @@ class App:
             if canvas:
                 canvas.yview_scroll(scroll_units, "units")
 
-    def _bottom_bar(self, parent: tk.Widget,
-                     header: str = "") -> tuple[tk.Frame, None]:
-        div = tk.Frame(parent, bg=_theme.get("sep_color"), height=1)
-        div.pack(side="bottom", fill="x")
+    def _scroll_section(self, parent: tk.Widget, header: str = "",
+                         bg_key: str = "bg_base"
+                         ) -> tuple[tk.Frame, tk.Canvas, tk.Frame]:
+        """Build a self-contained scrollable section: an outer frame the
+        caller grids/packs wherever it likes, holding a header, a canvas,
+        a scrollbar, and an inner body frame that content gets added to.
+        Returns (outer, canvas, body).
+        """
+        bg = _theme.get(bg_key)
+        outer = tk.Frame(parent, bg=bg)
 
-        outer = tk.Frame(parent, bg=_theme.get("bg_section"))
-        outer.pack(side="bottom", fill="x")
+        if header:
+            hdr = tk.Frame(outer, bg=_theme.get("bg_section"))
+            hdr.pack(side="top", fill="x")
+            tk.Label(hdr, text=header, bg=_theme.get("bg_section"),
+                     fg=ACCENT, font=("Consolas", 8, "bold"), pady=4).pack()
 
-        hdr = tk.Frame(outer, bg=_theme.get("bg_section"))
-        hdr.pack(fill="x")
-        tk.Label(hdr, text=header, bg=_theme.get("bg_section"),
-                 fg=ACCENT, font=("Consolas", 8, "bold"), pady=4).pack()
+        canvas = tk.Canvas(outer, borderwidth=0, highlightthickness=0,
+                            bg=bg, yscrollincrement=1)
+        sb = ttk.Scrollbar(outer, orient="vertical")
+        body = tk.Frame(canvas, bg=bg)
 
-        body = tk.Frame(outer, bg=_theme.get("bg_section"))
-        body.pack(fill="x")
+        canvas.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
 
-        return body, None
+        win_id = canvas.create_window((0, 0), window=body, anchor="nw")
+
+        def _on_body_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event):
+            canvas.itemconfig(win_id, width=event.width)
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        body.bind("<Configure>", _on_body_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.configure(command=canvas.yview)
+
+        return outer, canvas, body
 
     def _make_canvas_scroller(self, parent: tk.Widget) -> tuple[tk.Canvas, tk.Frame]:
         bg = _theme.get("bg_base")
@@ -3096,34 +3153,6 @@ class App:
         sb.configure(command=_yview_sync)
 
         return canvas, inner
-
-    def _split_scrollable(self, parent: tk.Widget,
-                          side: str,
-                          header: str = "",
-                          after: tk.Widget | None = None) -> tuple[tk.Canvas, tk.Frame]:
-
-        outer = tk.Frame(parent, bg=_theme.get("bg_base"))
-        if after is not None:
-            outer.pack(side=side, fill="both", expand=True, after=after)
-        else:
-            outer.pack(side=side, fill="both", expand=True)
-
-        if side == "right" or after is not None:
-            div = tk.Frame(parent, bg=_theme.get("sep_color"), width=1)
-            if after is not None:
-                div.pack(side=side, fill="y", before=outer)
-            else:
-                div.pack(side="left", fill="y", before=outer)
-
-        label_text = header or (
-            "◈ LEFT HAND" if side == "left" else "◈ RIGHT HAND"
-        )
-        hdr = tk.Frame(outer, bg=_theme.get("bg_section"))
-        hdr.pack(fill="x")
-        tk.Label(hdr, text=label_text, bg=_theme.get("bg_section"),
-                 fg=ACCENT, font=("Consolas", 8, "bold"), pady=4).pack()
-
-        return self._make_canvas_scroller(outer)
 
     def _scrollable(self, parent: tk.Widget) -> tuple[tk.Canvas, tk.Frame]:
         return self._make_canvas_scroller(parent)
