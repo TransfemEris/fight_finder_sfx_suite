@@ -188,7 +188,9 @@ def _sync_uppercase_globals() -> None:
 def get(token: str) -> str:
     return _active[token]
 
-_THEMES_PATH: Path = Path(__file__).parent / "themes.json"
+from app_paths import user_path
+
+_THEMES_PATH: Path = user_path("themes.json")
 
 def _load_themes_file() -> dict:
     try:

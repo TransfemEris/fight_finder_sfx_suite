@@ -3815,6 +3815,11 @@ if __name__ == "__main__":
 
     crash_handler.install(tk_root=root)
 
+    def _tk_callback_exception(exc_type, exc_value, exc_tb):
+        crash_handler._handle(exc_type, exc_value, exc_tb, source="tk callback")
+
+    root.report_callback_exception = _tk_callback_exception
+
     try:
         app = App(root)
     except Exception:
