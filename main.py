@@ -24,19 +24,37 @@ def _resource_path(name: str) -> Path:
 
 def _user_data_path(name: str) -> Path:
     if getattr(sys, "frozen", False):
-        base = Path(sys.executable).parent
+        import os
+        import shutil
+
+        appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        base = appdata / "Fight Finder SFX Suite"
+        base.mkdir(parents=True, exist_ok=True)
+
+        target = base / name
+
+        if not target.exists():
+            old_base = Path(sys.executable).parent
+            old_path = old_base / name
+            if old_path.exists():
+                try:
+                    if old_path.is_dir():
+                        shutil.copytree(old_path, target)
+                    else:
+                        shutil.copy2(old_path, target)
+                except Exception:
+                    pass
+        return target
     else:
         base = Path(__file__).parent
-    return base / name
+        return base / name
 
 def _relaunch_app() -> None:
     import subprocess
 
     try:
         if getattr(sys, "frozen", False):
-            # onedir builds: sys.executable is a real exe sitting in its
-            # own persistent folder, no temp extraction involved, so a
-            # plain spawn is safe -- no race to dodge here.
+
             subprocess.Popen([sys.executable], close_fds=True)
         else:
             subprocess.Popen([sys.executable, __file__] + sys.argv[1:],
@@ -928,8 +946,8 @@ class MusicStrip:
 
 def _osc_mode_row(parent: tk.Widget,
                   mode_var: tk.StringVar,
-                  val_a_var,   
-                  val_b_var,   
+                  val_a_var,
+                  val_b_var,
                   float_a_var: tk.StringVar,
                   float_b_var: tk.StringVar,
                   refresh_fn) -> tuple[tk.Widget, tk.Widget, tk.Widget]:
