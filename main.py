@@ -1222,6 +1222,7 @@ class OSCFrame:
         self._shoulder_frame = shoulder_frame
         self._pose_frame     = pose_frame
         self.binds: list[Bind] = []
+        self._bind_rows: list[dict] = []
         self.combo_binds: list[ComboBind] = []
         self._combo_slot_widgets: list[_OSCComboSlotWidget] = []
         self._combo_prev_matched: set[int] = set()
@@ -1486,17 +1487,20 @@ class OSCFrame:
                     fired = True
             combo_changed = self._evaluate_combos()
             if fired or combo_changed:
-                self._refresh_binds()
+                self._update_bind_states()
             if combo_changed:
                 self._refresh_combo_displays()
 
     def handle_button_release(self, hand: str, btn: str):
+        released = False
         for b in self.binds:
             if b.hand == hand and b.btn == btn:
                 b.release(self._osc)
+                released = True
         combo_changed = self._evaluate_combos()
+        if released or combo_changed:
+            self._update_bind_states()
         if combo_changed:
-            self._refresh_binds()
             self._refresh_combo_displays()
 
     def _global_held(self) -> set[tuple[str, str]]:
@@ -1610,6 +1614,7 @@ class OSCFrame:
     def _refresh_binds(self):
         for w in self._binds_body.winfo_children():
             w.destroy()
+        self._bind_rows = []
 
         if not self.binds:
             ttk.Label(self._binds_body, text="── NO BINDS ──",
@@ -1622,6 +1627,8 @@ class OSCFrame:
 
             row = ttk.Frame(outer)
             row.pack(fill="x")
+
+            row_refs: dict = {}
 
             ttk.Button(row, text="✕", width=2,
                        command=lambda i=i: self._remove_bind(i)).pack(side="right", padx=4)
@@ -1649,7 +1656,9 @@ class OSCFrame:
                 ttk.Spinbox(row, textvariable=var_b, from_=-9999, to=9999, width=5
                             ).pack(side="left", padx=(1, 6))
                 cur = b.val_a if b.int_idx == 0 else b.val_b
-                ttk.Label(row, text=f"[{cur}]", foreground=ACCENT).pack(side="left")
+                cur_lbl = ttk.Label(row, text=f"[{cur}]", foreground=ACCENT)
+                cur_lbl.pack(side="left")
+                row_refs["cur_lbl"] = cur_lbl
 
             elif b.mode == "float":
                 fa_var = tk.StringVar(value=getattr(b, "float_a", "1.0"))
@@ -1663,13 +1672,17 @@ class OSCFrame:
                 ttk.Label(row, text="↔", foreground=TEXT_DIM).pack(side="left")
                 ttk.Entry(row, textvariable=fb_var, width=7).pack(side="left", padx=(1, 6))
                 cur_f = getattr(b, "float_a", "1.0") if b.int_idx == 0 else getattr(b, "float_b", "0.0")
-                ttk.Label(row, text=f"[{cur_f}]", foreground=ACCENT).pack(side="left")
+                cur_lbl = ttk.Label(row, text=f"[{cur_f}]", foreground=ACCENT)
+                cur_lbl.pack(side="left")
+                row_refs["cur_lbl"] = cur_lbl
 
             else:
                 state_text = "TRUE" if b.state else "FALSE"
-                ttk.Label(row, text=state_text,
+                state_lbl = ttk.Label(row, text=state_text,
                           foreground=(TEXT_ON if b.state else TEXT_DIM),
-                          font=("Consolas", 8, "bold")).pack(side="left")
+                          font=("Consolas", 8, "bold"))
+                state_lbl.pack(side="left")
+                row_refs["state_lbl"] = state_lbl
                 inv_var = tk.BooleanVar(value=b.invert)
                 def _inv_changed(bind=b, var=inv_var):
                     bind.invert = var.get()
@@ -1690,6 +1703,33 @@ class OSCFrame:
                                     self._refresh_bind_delay_widget(dr, bind, var)
                                 )).pack(side="left", padx=(4, 0))
             self._refresh_bind_delay_widget(mode_row, b, tmode_var)
+            self._bind_rows.append(row_refs)
+
+    def _update_bind_states(self):
+        """Cheap, in-place refresh of bind display state (fired on every
+        combo/bind press). Does NOT touch widgets or tk Variables, so it
+        can't leak Tcl trace commands the way a full _refresh_binds()
+        rebuild does. Falls back to a full rebuild only if the bind list
+        itself changed shape since the last build."""
+        if len(self._bind_rows) != len(self.binds):
+            self._refresh_binds()
+            return
+        for row_refs, b in zip(self._bind_rows, self.binds):
+            if b.mode == "int":
+                cur = b.val_a if b.int_idx == 0 else b.val_b
+                lbl = row_refs.get("cur_lbl")
+                if lbl is not None:
+                    lbl.config(text=f"[{cur}]")
+            elif b.mode == "float":
+                cur_f = b.float_a if b.int_idx == 0 else b.float_b
+                lbl = row_refs.get("cur_lbl")
+                if lbl is not None:
+                    lbl.config(text=f"[{cur_f}]")
+            else:
+                lbl = row_refs.get("state_lbl")
+                if lbl is not None:
+                    lbl.config(text=("TRUE" if b.state else "FALSE"),
+                               foreground=(TEXT_ON if b.state else TEXT_DIM))
 
     def _refresh_bind_delay_widget(self, row: tk.Widget, bind, tmode_var: tk.StringVar):
         for w in row.winfo_children():
