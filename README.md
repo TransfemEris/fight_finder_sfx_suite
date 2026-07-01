@@ -1,4 +1,4 @@
-**FULL** GUIDE IS AVAILIBLE HERE:  https://www.youtube.com/watch?v=fu1s87Hu_fc
+**FULL** GUIDE IS AVAILIBLE HERE:  [https://www.youtube.com/watch?v=fu1s87Hu_fc](https://youtu.be/2xhRiihxP80)
 
 The SignPath Foundation is used for code signing in this.
 
